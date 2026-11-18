@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sejm bez powagi – śmieszne i ciekawe sytuacje z Sejmu</title>
+<meta name="description" content="Wpadki, spięcia i zabawne momenty z Sejmu. Strona aktualizuje się automatycznie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef0f3;--ink:#1b1d23;--mute:#5b6270;--red:#c8102e;--card:#fff;--line:#d5d9e0}
+@media(prefers-color-scheme:dark){:root{--bg:#14161b;--ink:#eceef2;--mute:#9aa1ae;--red:#ff4d63;--card:#1d2027;--line:#2e333d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+header{border-bottom:6px solid var(--red);padding-bottom:16px;margin-bottom:20px}
+h1{font-size:clamp(2.2rem,8vw,4rem);line-height:1;margin:0 0 8px;font-weight:800;letter-spacing:-.03em}
+header p{margin:0;color:var(--mute);max-width:56ch}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+.tools input{flex:1 1 220px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit}
+.chip{padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+article{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);padding:14px 16px;margin-bottom:12px;border-radius:4px}
+article:first-child h2{font-size:1.6rem}
+article h2{font-size:1.15rem;line-height:1.25;margin:0 0 6px;font-weight:600}
+article a{color:inherit;text-decoration:none}
+article a:hover h2{text-decoration:underline}
+.meta{font-size:.85rem;color:var(--mute)}
+.txt{margin:6px 0;color:var(--mute)}
+#status{color:var(--mute);font-size:.9rem;margin-bottom:12px}
+footer{margin-top:32px;color:var(--mute);font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Sejm bez powagi</h1>
+  <p>Wpadki, spięcia i zabawne momenty z polskiego parlamentu, zbierane automatycznie z sieci.</p>
+</header>
+<div class="tools">
+  <input id="q" type="search" placeholder="Szukaj, np. mównica, awantura, marszałek" aria-label="Szukaj">
+  <span id="chips" style="display:contents"></span>
+</div>
+<div id="status">Ładowanie…</div>
+<main id="list"></main>
+<footer>Treści pochodzą z linkowanych źródeł i należą do ich autorów. Strona tylko linkuje i cytuje tytuły. Dane odświeżane co 30 minut.</footer>
+</div>
+<script>
+let all=[],src='Wszystkie';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function render(){
+  const q=$('q').value.toLowerCase().trim();
+  const rows=all.filter(i=>(src==='Wszystkie'||i.source===src)&&(!q||(i.title+' '+i.text).toLowerCase().includes(q)));
+  $('list').innerHTML=rows.map(i=>`<article><a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer"><h2>${esc(i.title)}</h2></a>${i.text?`<p class="txt">${esc(i.text)}</p>`:''}<div class="meta">${esc(i.source)} · ${new Date(i.date).toLocaleString('pl-PL',{dateStyle:'medium',timeStyle:'short'})}</div></article>`).join('')||'<p>Brak wyników. Zmień filtr lub frazę.</p>';
+}
+function chips(){
+  const s=['Wszystkie',...new Set(all.map(i=>i.source))];
+  $('chips').innerHTML=s.map(x=>`<button class="chip" aria-pressed="${x===src}">${esc(x)}</button>`).join('');
+  $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{src=b.textContent;chips();render()});
+}
+fetch('data.json?'+Date.now()).then(r=>r.json()).then(d=>{
+  all=d.items||[];
+  $('status').textContent=all.length?`Ostatnia aktualizacja: ${new Date(d.updated).toLocaleString('pl-PL')} · ${all.length} wpisów`:'Brak danych. Uruchom workflow „Aktualizacja” w zakładce Actions.';
+  chips();render();
+}).catch(()=>{$('status').textContent='Nie udało się wczytać data.json.'});
+$('q').addEventListener('input',render);
+</script>
+</body>
+</html>
