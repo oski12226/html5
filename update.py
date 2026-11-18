@@ -22,13 +22,19 @@ def clean(t):
 def iso(dt):
     return dt.astimezone(timezone.utc).isoformat()
 
+USE_AI = bool(os.environ.get("ANTHROPIC_API_KEY"))
+
 def funny(text):
+    if USE_AI:
+        return True  # szeroki zbiór kandydatów, ocenia je Claude
     t = text.lower()
     return any(k in t for k in KEYWORDS)
 
 def google_news():
     out = []
     queries = ["Sejm wpadka", "Sejm awantura", "Sejm zabawne", "Sejm gafa poseł", "Sejm spięcie marszałek"]
+    if USE_AI:
+        queries += ["Sejm poseł nagranie", "Sejm mównica", "Sejm obrady", "Sejm absurd", "Sejm przepychanka"]
     for q in queries:
         url = "https://news.google.com/rss/search?" + urllib.parse.urlencode(
             {"q": q + " when:7d", "hl": "pl", "gl": "PL", "ceid": "PL:pl"})
@@ -91,12 +97,43 @@ def manual():
     except Exception:
         return []
 
+
+def ai_filter(items):
+    """Claude ocenia, które wpisy są śmieszne/ciekawe (1-10) i pisze krótki opis."""
+    if not USE_AI:
+        return items
+    cands = items[:150]
+    lst = "\n".join(f"{n}. {i['title']}" for n, i in enumerate(cands))
+    prompt = ("Poniżej lista nagłówków i wpisów o polskim Sejmie. Oceń każdy w skali 1-10 pod kątem tego, "
+              "czy opisuje śmieszną, absurdalną lub zaskakującą sytuację (a nie zwykły news polityczny). "
+              "Zwróć WYŁĄCZNIE JSON: tablicę obiektów {\"n\":numer,\"score\":liczba,\"opis\":\"jedno zdanie po polsku, neutralne, bez obrażania osób\"} "
+              "dla wpisów z oceną co najmniej 6.\n\n" + lst)
+    body = json.dumps({"model": "claude-haiku-5-5", "max_tokens": 4000,
+                       "messages": [{"role": "user", "content": prompt}]}).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=body, method="POST",
+        headers={"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01",
+                 "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            txt = json.load(r)["content"][0]["text"]
+        rated = json.loads(re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip())
+    except Exception as e:
+        print("AI błąd, używam słów kluczowych:", e)
+        return [i for i in items if any(k in i["title"].lower() for k in KEYWORDS)]
+    out = []
+    for r in rated:
+        if 0 <= r["n"] < len(cands):
+            it = dict(cands[r["n"]]); it["text"] = r.get("opis", ""); out.append(it)
+    return out
+
 items = google_news() + mastodon() + reddit() + x_api() + manual()
 seen, unique = set(), []
 for i in items:
     key = re.sub(r"\W+", "", i["title"].lower())[:60]
     if key and key not in seen and i.get("url"):
         seen.add(key); unique.append(i)
+unique.sort(key=lambda i: i["date"], reverse=True)
+unique = ai_filter([i for i in unique if i["source"] != "Ręcznie"]) + [i for i in unique if i["source"] == "Ręcznie"]
 unique.sort(key=lambda i: i["date"], reverse=True)
 json.dump({"updated": iso(datetime.now(timezone.utc)), "items": unique[:MAX_ITEMS]},
           open("data.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)

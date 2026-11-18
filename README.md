@@ -11,3 +11,6 @@ Statyczna strona (GitHub Pages) ze śmiesznymi i ciekawymi sytuacjami z Sejmu. W
 - Google News RSS, Mastodon (hashtagi #sejm), Reddit r/Polska: działają bez kluczy.
 - X: opcjonalnie dodaj sekret `X_BEARER_TOKEN` (Settings → Secrets → Actions). API X jest płatne.
 - Facebook i Instagram: brak darmowego publicznego API. Dodawaj wybrane posty ręcznie w `manual.json`.
+
+## Automatyczne wyszukiwanie zabawnych sytuacji (opcjonalne)
+Dodaj sekret `ANTHROPIC_API_KEY` (klucz z console.anthropic.com). Skrypt zbierze szeroko wpisy o Sejmie, a Claude oceni, które są śmieszne lub ciekawe, i doda krótki opis. Bez klucza działa filtr po słowach kluczowych.
