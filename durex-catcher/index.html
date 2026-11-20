@@ -263,7 +263,8 @@ button:active {
   $=id=>document.getElementById(id),W=960,H=540;
   const tusk=new Image();
   tusk.crossOrigin='anonymous';
-  tusk.src='https://commons.wikimedia.org/wiki/Special:FilePath/Official_portrait_of_Donald_Tusk.png';
+  tusk.src='https://commons.wikimedia.org/wiki/Special:FilePath/' +
+    'Official_portrait_of_Donald_Tusk.png';
   let best=+(localStorage.getItem('durexCatcherBest')||0),score=0,lives=3,level=1,
   running=false,paused=false,last=0,spawn=0,items=[],particles=[],keys=  {
   },pointer=false,player=  {
